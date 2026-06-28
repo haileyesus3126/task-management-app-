@@ -14,19 +14,37 @@ const app = express();
 
 app.disable("x-powered-by");
 
-app.use(helmet());
+app.use(helmet({ crossOriginResourcePolicy: false }));
 app.use(compression());
 
 if (process.env.NODE_ENV !== "production") {
   app.use(morgan("dev"));
 }
 
+const allowedOrigins = [
+  "http://localhost:5173",
+  process.env.CLIENT_URL,
+  "https://task-management-app-nine-coral.vercel.app",
+].filter(Boolean);
+
 app.use(
   cors({
-    origin: ["http://localhost:5173", process.env.CLIENT_URL],
+    origin(origin, callback) {
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.includes(origin) || origin.endsWith(".vercel.app")) {
+        return callback(null, true);
+      }
+
+      return callback(new Error(`CORS blocked: ${origin}`));
+    },
     credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
+
+app.options("*", cors());
 
 app.use(
   rateLimit({
