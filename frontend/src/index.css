@@ -1,0 +1,283 @@
+/* ===========================================================
+   BANNERS HALLMARK TASK MANAGEMENT SYSTEM
+   Professional Global Styles
+=========================================================== */
+
+:root {
+  --primary: #5b2d90;
+  --primary-light: #7b4bb4;
+  --primary-dark: #43206c;
+
+  --success: #16a34a;
+  --warning: #f59e0b;
+  --danger: #dc2626;
+  --info: #2563eb;
+
+  --white: #ffffff;
+
+  --bg: #f6f7fb;
+  --card: #ffffff;
+
+  --text: #1e293b;
+  --text-light: #64748b;
+
+  --border: #e5e7eb;
+
+  --shadow-sm: 0 2px 8px rgba(0,0,0,.05);
+  --shadow: 0 8px 25px rgba(0,0,0,.08);
+  --shadow-lg: 0 18px 45px rgba(0,0,0,.12);
+
+  --radius: 16px;
+  --transition: .25s ease;
+}
+
+*,
+*::before,
+*::after{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+html{
+    scroll-behavior:smooth;
+}
+
+body{
+    font-family:
+      Inter,
+      "Segoe UI",
+      Roboto,
+      Oxygen,
+      Ubuntu,
+      Cantarell,
+      sans-serif;
+
+    background:var(--bg);
+    color:var(--text);
+
+    -webkit-font-smoothing:antialiased;
+    -moz-osx-font-smoothing:grayscale;
+
+    min-height:100vh;
+}
+
+/* Scrollbar */
+
+::-webkit-scrollbar{
+    width:10px;
+    height:10px;
+}
+
+::-webkit-scrollbar-track{
+    background:#ececf3;
+}
+
+::-webkit-scrollbar-thumb{
+    background:linear-gradient(
+        180deg,
+        var(--primary-light),
+        var(--primary)
+    );
+
+    border-radius:50px;
+}
+
+::-webkit-scrollbar-thumb:hover{
+    background:var(--primary-dark);
+}
+
+/* Typography */
+
+h1,h2,h3,h4,h5,h6{
+    color:var(--text);
+    font-weight:700;
+    line-height:1.2;
+}
+
+p{
+    color:var(--text-light);
+    line-height:1.6;
+}
+
+/* Links */
+
+a{
+    text-decoration:none;
+    color:inherit;
+    transition:var(--transition);
+}
+
+a:hover{
+    color:var(--primary);
+}
+
+/* Buttons */
+
+button{
+    cursor:pointer;
+    border:none;
+    transition:all .25s ease;
+    font-weight:600;
+}
+
+button:hover{
+    transform:translateY(-2px);
+}
+
+button:active{
+    transform:scale(.98);
+}
+
+button:disabled{
+    opacity:.6;
+    cursor:not-allowed;
+}
+
+/* Inputs */
+
+input,
+textarea,
+select{
+
+    width:100%;
+
+    font:inherit;
+
+    border:1px solid var(--border);
+
+    border-radius:12px;
+
+    padding:14px 16px;
+
+    background:#fff;
+
+    transition:.25s;
+}
+
+textarea{
+    resize:vertical;
+}
+
+input:focus,
+textarea:focus,
+select:focus{
+
+    outline:none;
+
+    border-color:var(--primary);
+
+    box-shadow:
+        0 0 0 4px rgba(91,45,144,.15);
+}
+
+/* Cards */
+
+.card{
+    background:var(--card);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    padding:24px;
+}
+
+/* Tables */
+
+table{
+    width:100%;
+    border-collapse:collapse;
+}
+
+th,
+td{
+    padding:16px;
+}
+
+th{
+    background:#fafafa;
+    text-align:left;
+}
+
+/* Images */
+
+img{
+    max-width:100%;
+    display:block;
+}
+
+/* Selection */
+
+::selection{
+    background:var(--primary);
+    color:white;
+}
+
+/* Nice Hover */
+
+.hover-card{
+    transition:.25s;
+}
+
+.hover-card:hover{
+    transform:translateY(-4px);
+    box-shadow:var(--shadow-lg);
+}
+
+/* Fade Animation */
+
+.fade-in{
+    animation:fade .5s ease;
+}
+
+@keyframes fade{
+
+    from{
+
+        opacity:0;
+        transform:translateY(12px);
+
+    }
+
+    to{
+
+        opacity:1;
+        transform:translateY(0);
+
+    }
+
+}
+
+/* Glass Effect */
+
+.glass{
+
+    background:rgba(255,255,255,.65);
+
+    backdrop-filter:blur(18px);
+
+    border:1px solid rgba(255,255,255,.25);
+
+}
+
+/* Loading Animation */
+
+.loading{
+
+    animation:pulse 1.5s infinite;
+
+}
+
+@keyframes pulse{
+
+    0%{
+        opacity:.6;
+    }
+
+    50%{
+        opacity:1;
+    }
+
+    100%{
+        opacity:.6;
+    }
+
+}
