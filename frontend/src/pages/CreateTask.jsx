@@ -22,15 +22,27 @@ const CreateTask = () => {
   const fetchUsers = async () => {
     try {
       setUsersLoading(true);
+      setMessage("");
 
-      const res = await api.get("/users");
+      // FIXED:
+      // Supervisor should load only assignable active USER accounts
+      const res = await api.get("/users/assignable");
 
       const userList = res.data.users || [];
 
-      setUsers(userList.filter((user) => user.isActive));
+      setUsers(userList);
     } catch (error) {
+      console.error(
+        "Failed to load assignable users:",
+        error.response?.data || error.message
+      );
+
       setMessageType("error");
-      setMessage("Failed to load users. Please try again.");
+
+      setMessage(
+        error.response?.data?.message ||
+          "Failed to load users. Please try again."
+      );
     } finally {
       setUsersLoading(false);
     }
@@ -100,7 +112,11 @@ const CreateTask = () => {
       });
     } catch (error) {
       setMessageType("error");
-      setMessage(error.response?.data?.message || "Failed to create task.");
+
+      setMessage(
+        error.response?.data?.message ||
+          "Failed to create task."
+      );
     } finally {
       setLoading(false);
     }
@@ -114,7 +130,9 @@ const CreateTask = () => {
         {message && (
           <div
             className={
-              messageType === "error" ? "task-message error" : "task-message"
+              messageType === "error"
+                ? "task-message error"
+                : "task-message"
             }
           >
             {message}
@@ -145,7 +163,7 @@ const CreateTask = () => {
               placeholder="Task description"
               rows={5}
               required
-            ></textarea>
+            />
           </div>
 
           <div className="form-row">
@@ -175,15 +193,26 @@ const CreateTask = () => {
                 disabled={usersLoading}
               >
                 <option value="">
-                  {usersLoading ? "Loading users..." : "Select user"}
+                  {usersLoading
+                    ? "Loading users..."
+                    : "Select user"}
                 </option>
 
                 {users.map((user) => (
-                  <option key={user.id || user._id} value={user.id || user._id}>
-                    {user.name} ({user.role})
+                  <option
+                    key={user.id || user._id}
+                    value={user.id || user._id}
+                  >
+                    {user.name}
                   </option>
                 ))}
               </select>
+
+              {!usersLoading && users.length === 0 && (
+                <p className="no-users-message">
+                  No active users available for assignment.
+                </p>
+              )}
             </div>
           </div>
 
@@ -199,7 +228,11 @@ const CreateTask = () => {
             />
           </div>
 
-          <button type="submit" className="create-task-btn" disabled={loading}>
+          <button
+            type="submit"
+            className="create-task-btn"
+            disabled={loading || usersLoading}
+          >
             {loading ? "Creating..." : "Create Task"}
           </button>
         </form>
