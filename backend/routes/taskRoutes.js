@@ -6,7 +6,6 @@ const {
   getTasks,
   updateTask,
   updateTaskProgress,
-  updateTaskStatus,
   submitTask,
   approveTask,
   rejectTask,
@@ -19,43 +18,50 @@ const { protect, authorizeRoles } = require("../middleware/authMiddleware");
 
 const router = express.Router();
 
+// All task routes require authentication
 router.use(protect);
 
+// Get tasks / Create task
 router
   .route("/")
   .get(getTasks)
   .post(authorizeRoles("ADMIN", "SUPERVISOR"), createTask);
 
-router.put("/:id", authorizeRoles("ADMIN", "SUPERVISOR"), updateTask);
-
-router.patch("/:id/progress", updateTaskProgress);
-
-router.patch(
-  "/:id/status",
+// Update general task information
+router.put(
+  "/:id",
   authorizeRoles("ADMIN", "SUPERVISOR"),
-  updateTaskStatus
+  updateTask
 );
 
+// Update progress
+router.patch("/:id/progress", updateTaskProgress);
+
+// Submit task
 router.post("/:id/submit", submitTask);
 
+// Approve submitted task
 router.post(
   "/:id/approve",
   authorizeRoles("ADMIN", "SUPERVISOR"),
   approveTask
 );
 
+// Reject submitted task
 router.post(
   "/:id/reject",
   authorizeRoles("ADMIN", "SUPERVISOR"),
   rejectTask
 );
 
+// Upload task attachment
 router.post(
   "/:id/upload",
   upload.single("file"),
   uploadTaskFile
 );
 
+// Task comments
 router
   .route("/:id/comments")
   .get(getTaskComments)

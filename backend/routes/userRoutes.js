@@ -3,6 +3,7 @@ const upload = require("../middleware/uploadMiddleware");
 
 const {
   getUsers,
+  getAssignableUsers,
   createUser,
   updateUser,
   deactivateUser,
@@ -23,6 +24,15 @@ router.put(
 
 router.put("/change-password", protect, changePassword);
 
+// ADMIN and SUPERVISOR can load active USER accounts for task assignment
+router.get(
+  "/assignable",
+  protect,
+  authorizeRoles("ADMIN", "SUPERVISOR"),
+  getAssignableUsers
+);
+
+// From this point downward, routes are ADMIN-only
 router.use(protect);
 router.use(authorizeRoles("ADMIN"));
 

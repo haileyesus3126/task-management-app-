@@ -1,6 +1,16 @@
+const mongoose = require("mongoose");
+const validator = require("validator");
 const User = require("../models/User");
 
-const allowedRoles = ["ADMIN", "SUPERVISOR", "USER"];
+const allowedRoles = [
+  "ADMIN",
+  "SUPERVISOR",
+  "USER",
+];
+
+const isValidObjectId = (id) => {
+  return mongoose.Types.ObjectId.isValid(id);
+};
 
 const sanitizeUser = (user) => ({
   id: user._id,
@@ -15,9 +25,17 @@ const sanitizeUser = (user) => ({
   updatedAt: user.updatedAt,
 });
 
-const getUsers = async (req, res) => {
+const getUsers = async (
+  req,
+  res,
+  next
+) => {
   try {
-    const users = await User.find().select("-password").sort({ createdAt: -1 });
+    const users = await User.find()
+      .select("-password")
+      .sort({
+        createdAt: -1,
+      });
 
     return res.status(200).json({
       success: true,
@@ -25,204 +43,394 @@ const getUsers = async (req, res) => {
       users,
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return next(error);
   }
 };
 
-const createUser = async (req, res) => {
+const getAssignableUsers = async (
+  req,
+  res,
+  next
+) => {
   try {
-    let { name, email, password, role, department, position } = req.body;
+    const users = await User.find({
+      role: "USER",
+      isActive: true,
+    })
+      .select(
+        "name email role department position profileImage"
+      )
+      .sort({
+        name: 1,
+      });
 
-    if (!name || !email || !password) {
+    return res.status(200).json({
+      success: true,
+      count: users.length,
+      users,
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+const createUser = async (
+  req,
+  res,
+  next
+) => {
+  try {
+    let {
+      name,
+      email,
+      password,
+      role,
+      department,
+      position,
+    } = req.body;
+
+    if (
+      !name ||
+      !email ||
+      !password
+    ) {
       return res.status(400).json({
         success: false,
-        message: "Name, email, and password are required",
+        message:
+          "Name, email, and password are required",
       });
     }
 
-    email = email.trim().toLowerCase();
+    name = name.trim();
+    email = email
+      .trim()
+      .toLowerCase();
 
-    if (role && !allowedRoles.includes(role)) {
+    if (!validator.isEmail(email)) {
       return res.status(400).json({
         success: false,
-        message: "Invalid user role",
+        message:
+          "Please provide a valid email address",
       });
     }
 
-    const userExists = await User.findOne({ email });
+    if (password.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Password must be at least 6 characters",
+      });
+    }
+
+    if (
+      role &&
+      !allowedRoles.includes(role)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Invalid user role",
+      });
+    }
+
+    const userExists =
+      await User.findOne({
+        email,
+      });
 
     if (userExists) {
       return res.status(400).json({
         success: false,
-        message: "User already exists",
+        message:
+          "User already exists",
       });
     }
 
-    const user = await User.create({
-      name: name.trim(),
-      email,
-      password,
-      role: role || "USER",
-      department,
-      position,
-    });
+    const user =
+      await User.create({
+        name,
+        email,
+        password,
+        role:
+          role || "USER",
+        department,
+        position,
+      });
 
     return res.status(201).json({
       success: true,
-      message: "User created successfully",
-      user: sanitizeUser(user),
+      message:
+        "User created successfully",
+      user:
+        sanitizeUser(user),
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return next(error);
   }
 };
 
-const updateUser = async (req, res) => {
+const updateUser = async (
+  req,
+  res,
+  next
+) => {
   try {
-    const { name, role, department, position, isActive } = req.body;
+    if (
+      !isValidObjectId(
+        req.params.id
+      )
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Invalid user ID",
+      });
+    }
 
-    const user = await User.findById(req.params.id);
+    const {
+      name,
+      role,
+      department,
+      position,
+      isActive,
+    } = req.body;
+
+    const user =
+      await User.findById(
+        req.params.id
+      );
 
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: "User not found",
+        message:
+          "User not found",
       });
     }
 
-    if (role && !allowedRoles.includes(role)) {
+    if (
+      role &&
+      !allowedRoles.includes(role)
+    ) {
       return res.status(400).json({
         success: false,
-        message: "Invalid user role",
+        message:
+          "Invalid user role",
       });
     }
 
-    if (name) user.name = name.trim();
-    if (role) user.role = role;
-    if (department !== undefined) user.department = department;
-    if (position !== undefined) user.position = position;
+    if (name) {
+      user.name =
+        name.trim();
+    }
 
-    if (typeof isActive === "boolean") {
-      user.isActive = isActive;
+    if (role) {
+      user.role = role;
+    }
+
+    if (
+      department !== undefined
+    ) {
+      user.department =
+        department;
+    }
+
+    if (
+      position !== undefined
+    ) {
+      user.position =
+        position;
+    }
+
+    if (
+      typeof isActive ===
+      "boolean"
+    ) {
+      user.isActive =
+        isActive;
     }
 
     await user.save();
 
     return res.status(200).json({
       success: true,
-      message: "User updated successfully",
-      user: sanitizeUser(user),
+      message:
+        "User updated successfully",
+      user:
+        sanitizeUser(user),
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return next(error);
   }
 };
 
-const deactivateUser = async (req, res) => {
+const deactivateUser = async (
+  req,
+  res,
+  next
+) => {
   try {
-    const user = await User.findById(req.params.id);
+    if (
+      !isValidObjectId(
+        req.params.id
+      )
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Invalid user ID",
+      });
+    }
+
+    const user =
+      await User.findById(
+        req.params.id
+      );
 
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: "User not found",
+        message:
+          "User not found",
       });
     }
 
     user.isActive = false;
+
     await user.save();
 
     return res.status(200).json({
       success: true,
-      message: "User deactivated successfully",
-      user: sanitizeUser(user),
+      message:
+        "User deactivated successfully",
+      user:
+        sanitizeUser(user),
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return next(error);
   }
 };
 
-const uploadProfileImage = async (req, res) => {
+const uploadProfileImage = async (
+  req,
+  res,
+  next
+) => {
   try {
-    const user = await User.findById(req.user._id);
+    const user =
+      await User.findById(
+        req.user._id
+      );
 
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: "User not found",
+        message:
+          "User not found",
       });
     }
 
     if (!req.file) {
       return res.status(400).json({
         success: false,
-        message: "No image uploaded",
+        message:
+          "No image uploaded",
       });
     }
 
-    user.profileImage = req.file.path;
+    user.profileImage =
+      req.file.path;
+
     await user.save();
 
     return res.status(200).json({
       success: true,
-      message: "Profile image uploaded successfully",
-      user: sanitizeUser(user),
+      message:
+        "Profile image uploaded successfully",
+      user:
+        sanitizeUser(user),
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return next(error);
   }
 };
 
-const changePassword = async (req, res) => {
+const changePassword = async (
+  req,
+  res,
+  next
+) => {
   try {
-    const { currentPassword, newPassword } = req.body;
+    const {
+      currentPassword,
+      newPassword,
+    } = req.body;
 
-    if (!currentPassword || !newPassword) {
+    if (
+      !currentPassword ||
+      !newPassword
+    ) {
       return res.status(400).json({
         success: false,
-        message: "Current password and new password are required",
+        message:
+          "Current password and new password are required",
       });
     }
 
-    if (newPassword.length < 6) {
+    if (
+      newPassword.length < 6
+    ) {
       return res.status(400).json({
         success: false,
-        message: "New password must be at least 6 characters",
+        message:
+          "New password must be at least 6 characters",
       });
     }
 
-    const user = await User.findById(req.user._id).select("+password");
+    const user =
+      await User.findById(
+        req.user._id
+      ).select("+password");
 
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: "User not found",
+        message:
+          "User not found",
       });
     }
 
-    const isMatch = await user.matchPassword(currentPassword);
+    const isMatch =
+      await user.matchPassword(
+        currentPassword
+      );
 
     if (!isMatch) {
       return res.status(400).json({
         success: false,
-        message: "Current password is incorrect",
+        message:
+          "Current password is incorrect",
       });
     }
 
-    user.password = newPassword;
+    user.password =
+      newPassword;
+
     await user.save();
 
     return res.status(200).json({
       success: true,
-      message: "Password updated successfully",
+      message:
+        "Password updated successfully",
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return next(error);
   }
 };
 
 module.exports = {
   getUsers,
+  getAssignableUsers,
   createUser,
   updateUser,
   deactivateUser,
