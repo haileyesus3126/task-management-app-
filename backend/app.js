@@ -12,7 +12,14 @@ const notificationRoutes = require("./routes/notificationRoutes");
 
 const app = express();
 
+// Render / reverse proxy support
+app.set("trust proxy", 1);
+
 app.disable("x-powered-by");
+
+// --------------------------------------------------
+// Security / Performance Middleware
+// --------------------------------------------------
 
 app.use(
   helmet({
@@ -26,6 +33,10 @@ if (process.env.NODE_ENV !== "production") {
   app.use(morgan("dev"));
 }
 
+// --------------------------------------------------
+// CORS
+// --------------------------------------------------
+
 const allowedOrigins = [
   "http://localhost:5173",
   process.env.CLIENT_URL,
@@ -35,6 +46,7 @@ const allowedOrigins = [
 app.use(
   cors({
     origin(origin, callback) {
+      // Allow Postman, server-to-server requests, etc.
       if (!origin) {
         return callback(null, true);
       }
@@ -72,25 +84,9 @@ app.use(
 
 app.options(/.*/, cors());
 
-app.use(
-  rateLimit({
-    windowMs: 15 * 60 * 1000,
-
-    max:
-      process.env.NODE_ENV === "production"
-        ? 100
-        : 1000,
-
-    standardHeaders: true,
-    legacyHeaders: false,
-
-    message: {
-      success: false,
-      message:
-        "Too many requests, please try again later.",
-    },
-  })
-);
+// --------------------------------------------------
+// Request Body Parsing
+// --------------------------------------------------
 
 app.use(
   express.json({
@@ -105,10 +101,69 @@ app.use(
   })
 );
 
+// --------------------------------------------------
+// Rate Limiting
+// --------------------------------------------------
+
+// General API limiter
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+
+  max:
+    process.env.NODE_ENV === "production"
+      ? 1000
+      : 5000,
+
+  standardHeaders: true,
+  legacyHeaders: false,
+
+  message: {
+    success: false,
+    message:
+      "Too many requests, please try again later.",
+  },
+});
+
+// Stricter limiter only for login attempts
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+
+  max:
+    process.env.NODE_ENV === "production"
+      ? 20
+      : 100,
+
+  standardHeaders: true,
+  legacyHeaders: false,
+
+  // Successful login should not count against the user
+  skipSuccessfulRequests: true,
+
+  message: {
+    success: false,
+    message:
+      "Too many login attempts. Please try again later.",
+  },
+});
+
+// Apply general limiter only to API routes
+app.use("/api", apiLimiter);
+
+// Apply stricter limiter specifically to login
+app.use("/api/auth/login", loginLimiter);
+
+// --------------------------------------------------
+// Static Uploads
+// --------------------------------------------------
+
 app.use(
   "/uploads",
   express.static("uploads")
 );
+
+// --------------------------------------------------
+// Health Route
+// --------------------------------------------------
 
 app.get("/", (req, res) => {
   return res.status(200).json({
@@ -118,6 +173,10 @@ app.get("/", (req, res) => {
   });
 });
 
+// --------------------------------------------------
+// API Routes
+// --------------------------------------------------
+
 app.use("/api/auth", authRoutes);
 app.use("/api/tasks", taskRoutes);
 app.use("/api/users", userRoutes);
@@ -126,7 +185,10 @@ app.use(
   notificationRoutes
 );
 
-// 404 handler
+// --------------------------------------------------
+// 404 Handler
+// --------------------------------------------------
+
 app.use((req, res) => {
   return res.status(404).json({
     success: false,
@@ -134,20 +196,24 @@ app.use((req, res) => {
   });
 });
 
-// Central error handler
+// --------------------------------------------------
+// Central Error Handler
+// --------------------------------------------------
+
 app.use((err, req, res, next) => {
   console.error(err);
 
   let statusCode = err.status || 500;
-  let message = err.message || "Internal Server Error";
+  let message =
+    err.message || "Internal Server Error";
 
-  // Mongoose invalid ObjectId / CastError
+  // Mongoose invalid ObjectId
   if (err.name === "CastError") {
     statusCode = 400;
     message = "Invalid resource ID";
   }
 
-  // Mongoose validation error
+  // Mongoose validation
   if (err.name === "ValidationError") {
     statusCode = 400;
 
@@ -158,7 +224,7 @@ app.use((err, req, res, next) => {
     message = messages.join(", ");
   }
 
-  // Duplicate MongoDB unique field
+  // MongoDB duplicate value
   if (err.code === 11000) {
     statusCode = 400;
 
@@ -178,7 +244,7 @@ app.use((err, req, res, next) => {
       "File is too large. Maximum size is 5 MB.";
   }
 
-  // Hide internal details in production
+  // Hide unexpected internal errors in production
   if (
     process.env.NODE_ENV === "production" &&
     statusCode === 500
